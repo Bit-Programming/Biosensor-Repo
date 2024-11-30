@@ -66,7 +66,7 @@ const Tab3: React.FC = () => {
   const [darkMode, setDarkMode] = useState<boolean>(false);
 
   const url =
-    'https://raw.githubusercontent.com/Bit-Programming/Biosensor-Repo/main/data.json';
+    'https://raw.githubusercontent.com/Bit-Programming/Biosensor-Repo/refs/heads/main/data.json';
 
   const fetchData = () => {
     return fetch(url)
