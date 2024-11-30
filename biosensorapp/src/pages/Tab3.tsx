@@ -19,6 +19,7 @@ const FETCH_INTERVAL = 5000; // 5 seconds
 const Tab3: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [notificationSent, setNotificationSent] = useState<boolean>(false);
 
   useEffect(() => {
     const url =
@@ -76,8 +77,12 @@ const Tab3: React.FC = () => {
       currentLevel,
     });
 
-    if (parseFloat(currentLevel) > DRUNK_LEVEL) {
+    if (parseFloat(currentLevel) > DRUNK_LEVEL && !notificationSent) {
       sendNotification('Warning: Alcohol level is above the drunk threshold!');
+      setNotificationSent(true);
+      console.log('Notification sent.');
+    } else if (parseFloat(currentLevel) <= DRUNK_LEVEL && notificationSent) {
+      setNotificationSent(false);
     }
   };
 
