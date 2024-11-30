@@ -50,11 +50,23 @@ const Tab3: React.FC = () => {
     });
   };
 
+  const formatLabels = (readings: any) => {
+    let lastDate = '';
+    return readings.map((reading: any) => {
+      const date = new Date(reading.time);
+      const dateString = date.toLocaleDateString();
+      const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (dateString !== lastDate) {
+        lastDate = dateString;
+        return `${dateString} ${timeString}`;
+      }
+      return timeString;
+    });
+  };
+
   const chartData = data
     ? {
-        labels: data.readings.map((reading: any) =>
-          new Date(reading.time).toLocaleTimeString()
-        ),
+        labels: formatLabels(data.readings),
         datasets: [
           {
             label: 'Alcohol Level (%)',
