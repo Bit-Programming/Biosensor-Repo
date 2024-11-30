@@ -14,6 +14,7 @@ import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
 
 const DRUNK_LEVEL = 0.08;
+const FETCH_INTERVAL = 5000; // 5 seconds
 
 const Tab3: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -23,16 +24,42 @@ const Tab3: React.FC = () => {
     const url =
       'https://raw.githubusercontent.com/Bit-Programming/Biosensor-Repo/refs/heads/main/data.json';
 
-    fetch(url)
-      .then((response) => response.json())
-      .then((jsonData) => {
-        setData(jsonData);
-        calculateStats(jsonData);
-      })
-      .catch((error) => {
-        console.error('Error fetching data:', error);
-      });
+    const fetchData = () => {
+      console.log('Fetching data...');
+      fetch(url)
+        .then((response) => response.json())
+        .then((jsonData) => {
+          setData(jsonData);
+          calculateStats(jsonData);
+        })
+        .catch((error) => {
+          console.error('Error fetching data:', error);
+        });
+    };
+
+    fetchData();
+    const intervalId = setInterval(fetchData, FETCH_INTERVAL);
+
+    requestNotificationPermission();
+
+    return () => clearInterval(intervalId);
   }, []);
+
+  const requestNotificationPermission = () => {
+    if ('Notification' in window) {
+      Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          console.log('Notification permission granted.');
+        }
+      });
+    }
+  };
+
+  const sendNotification = (message: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(message);
+    }
+  };
 
   const calculateStats = (data: any) => {
     const readings = data.readings;
@@ -48,6 +75,10 @@ const Tab3: React.FC = () => {
       avgLevel,
       currentLevel,
     });
+
+    if (parseFloat(currentLevel) > DRUNK_LEVEL) {
+      sendNotification('Warning: Alcohol level is above the drunk threshold!');
+    }
   };
 
   const formatLabels = (readings: any) => {
