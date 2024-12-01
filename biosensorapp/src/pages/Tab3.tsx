@@ -20,7 +20,7 @@ const FETCH_INTERVAL = 5000; // 5 seconds
 const Tab3: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
-  const notificationSentRef = useRef<boolean>(false); // Use useRef instead of useState
+  const notificationSentRef = useRef<boolean>(false);
 
   useEffect(() => {
     const url =
@@ -29,13 +29,19 @@ const Tab3: React.FC = () => {
     const fetchData = () => {
       console.log('Fetching data...');
       fetch(url)
-        .then((response) => response.json())
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}`);
+          }
+          return response.json();
+        })
         .then((jsonData) => {
           setData(jsonData);
           calculateStats(jsonData);
         })
         .catch((error) => {
           console.error('Error fetching data:', error);
+          alert('Error fetching data: ' + error.message);
         });
     };
 
@@ -80,13 +86,15 @@ const Tab3: React.FC = () => {
   const calculateStats = (data: any) => {
     const readings = data.readings;
     const levels = readings.map((reading: any) => reading.level);
-  
+
     // Keep levels as numbers for calculation
     const maxLevel = Math.max(...levels);
     const minLevel = Math.min(...levels);
-    const avgLevel = levels.reduce((sum: number, level: number) => sum + level, 0) / levels.length;
+    const avgLevel =
+      levels.reduce((sum: number, level: number) => sum + level, 0) /
+      levels.length;
     const currentLevel = levels[levels.length - 1]; // This is a number
-  
+
     // Set stats with formatted strings
     setStats({
       maxLevel: maxLevel.toFixed(2),
@@ -94,15 +102,19 @@ const Tab3: React.FC = () => {
       avgLevel: avgLevel.toFixed(2),
       currentLevel: currentLevel.toFixed(2),
     });
-  
+
     // Use currentLevel as a number for comparison
     if (currentLevel >= DRUNK_LEVEL && !notificationSentRef.current) {
-      sendNotification('Warning: Alcohol level is at or above the drunk threshold!');
+      sendNotification(
+        'Warning: Alcohol level is at or above the drunk threshold!'
+      );
       notificationSentRef.current = true;
       console.log('Notification sent.');
     } else if (currentLevel < DRUNK_LEVEL && notificationSentRef.current) {
       notificationSentRef.current = false;
-      console.log('Alcohol level back to normal. Ready to send new notification.');
+      console.log(
+        'Alcohol level back to normal. Ready to send new notification.'
+      );
     }
   };
 
@@ -160,6 +172,20 @@ const Tab3: React.FC = () => {
       }
     : null;
 
+  // Define chart options
+  const chartOptions = {
+    maintainAspectRatio: false,
+    responsive: true,
+    scales: {
+      x: {
+        ticks: {
+          maxRotation: 90,
+          minRotation: 45,
+        },
+      },
+    },
+  };
+
   return (
     <IonPage>
       <IonHeader>
@@ -178,7 +204,9 @@ const Tab3: React.FC = () => {
                 <IonCardContent>
                   <h2>
                     {stats.currentLevel}%{' '}
-                    {parseFloat(stats.currentLevel) >= DRUNK_LEVEL ? 'Drunk' : ''}
+                    {parseFloat(stats.currentLevel) >= DRUNK_LEVEL
+                      ? 'Drunk'
+                      : ''}
                   </h2>
                 </IonCardContent>
               </IonCard>
@@ -200,7 +228,9 @@ const Tab3: React.FC = () => {
                     <IonCardTitle>Alcohol Level Over Time</IonCardTitle>
                   </IonCardHeader>
                   <IonCardContent>
-                    <Line data={chartData} />
+                    <div style={{ width: '100%', height: '300px' }}>
+                      <Line data={chartData} options={chartOptions} />
+                    </div>
                   </IonCardContent>
                 </IonCard>
               )}
