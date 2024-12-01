@@ -10,7 +10,7 @@ import {
   IonCardTitle,
   IonCardContent,
 } from '@ionic/react';
-import { Line } from 'react-chartjs-2';
+import { Line, Bar } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
@@ -24,14 +24,20 @@ const Tab3: React.FC = () => {
 
   useEffect(() => {
     const url =
-      'https://raw.githubusercontent.com/Bit-Programming/Biosensor-Repo/main/data.json';
+      'https://api.github.com/repos/Bit-Programming/Biosensor-Repo/contents/data.json';
 
     const fetchData = () => {
-      console.log('Fetching data...');
-      fetch(url)
+      console.log('Fetching data via GitHub API...');
+      fetch(url, {
+        headers: {
+          Accept: 'application/vnd.github.v3.raw',
+        },
+      })
         .then((response) => {
           if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}`);
+            throw new Error(
+              `HTTP error! Status: ${response.status} - ${response.statusText}`
+            );
           }
           return response.json();
         })
@@ -135,7 +141,21 @@ const Tab3: React.FC = () => {
     });
   };
 
-  const chartData = data
+  // Filter readings for the current day
+  const getCurrentDayReadings = (readings: any) => {
+    const today = new Date();
+    return readings.filter((reading: any) => {
+      const readingDate = new Date(reading.time);
+      return (
+        readingDate.getFullYear() === today.getFullYear() &&
+        readingDate.getMonth() === today.getMonth() &&
+        readingDate.getDate() === today.getDate()
+      );
+    });
+  };
+
+  // Prepare data for the original chart (all data)
+  const allDataChartData = data
     ? {
         labels: formatLabels(data.readings),
         datasets: [
@@ -171,6 +191,95 @@ const Tab3: React.FC = () => {
         ],
       }
     : null;
+
+  // Prepare data for the chart (current day's data)
+  const currentDayData = data ? getCurrentDayReadings(data.readings) : [];
+
+  const currentDayChartData =
+    data && currentDayData.length > 0
+      ? {
+          labels: formatLabels(currentDayData),
+          datasets: [
+            {
+              label: "Today's Alcohol Level (%)",
+              data: currentDayData.map((reading: any) => reading.level),
+              fill: false,
+              backgroundColor: currentDayData.map((reading: any) =>
+                reading.level >= DRUNK_LEVEL
+                  ? 'rgba(255, 99, 132, 0.6)'
+                  : 'rgba(38, 166, 154, 0.6)'
+              ),
+              borderColor: 'rgba(38, 166, 154, 1)',
+              pointBorderColor: currentDayData.map((reading: any) =>
+                reading.level >= DRUNK_LEVEL
+                  ? 'rgba(255, 99, 132, 1)'
+                  : 'rgba(38, 166, 154, 1)'
+              ),
+              pointBackgroundColor: currentDayData.map((reading: any) =>
+                reading.level >= DRUNK_LEVEL
+                  ? 'rgba(255, 99, 132, 1)'
+                  : 'rgba(38, 166, 154, 1)'
+              ),
+            },
+            {
+              label: 'Drunk Level',
+              data: new Array(currentDayData.length).fill(DRUNK_LEVEL),
+              borderColor: 'rgba(255, 99, 132, 1)',
+              borderDash: [10, 5],
+              fill: false,
+              pointRadius: 0,
+            },
+          ],
+        }
+      : null;
+
+  // Prepare data for the bottom chart (daily averages)
+  const getDailyAverages = (readings: any) => {
+    const dailyData: { [key: string]: number[] } = {};
+
+    readings.forEach((reading: any) => {
+      const date = new Date(reading.time);
+      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = [];
+      }
+      dailyData[dateKey].push(reading.level);
+    });
+
+    const dates = Object.keys(dailyData).sort();
+    const averages = dates.map((date) => {
+      const levels = dailyData[date];
+      const avg =
+        levels.reduce((sum, level) => sum + level, 0) / levels.length;
+      return avg;
+    });
+
+    return { dates, averages };
+  };
+
+  const dailyAveragesData = data
+    ? getDailyAverages(data.readings)
+    : { dates: [], averages: [] };
+
+  const dailyAveragesChartData =
+    data && dailyAveragesData.dates.length > 0
+      ? {
+          labels: dailyAveragesData.dates,
+          datasets: [
+            {
+              label: 'Daily Average Alcohol Level (%)',
+              data: dailyAveragesData.averages,
+              backgroundColor: dailyAveragesData.averages.map((avg) =>
+                avg >= DRUNK_LEVEL
+                  ? 'rgba(255, 99, 132, 0.6)'
+                  : 'rgba(38, 166, 154, 0.6)'
+              ),
+              borderColor: 'rgba(38, 166, 154, 1)',
+              borderWidth: 1,
+            },
+          ],
+        }
+      : null;
 
   // Define chart options
   const chartOptions = {
@@ -222,14 +331,43 @@ const Tab3: React.FC = () => {
                 </IonCardContent>
               </IonCard>
 
-              {chartData && (
+              {allDataChartData && (
                 <IonCard>
                   <IonCardHeader>
                     <IonCardTitle>Alcohol Level Over Time</IonCardTitle>
                   </IonCardHeader>
                   <IonCardContent>
                     <div style={{ width: '100%', height: '300px' }}>
-                      <Line data={chartData} options={chartOptions} />
+                      <Line data={allDataChartData} options={chartOptions} />
+                    </div>
+                  </IonCardContent>
+                </IonCard>
+              )}
+
+              {currentDayChartData && (
+                <IonCard>
+                  <IonCardHeader>
+                    <IonCardTitle>Today's Alcohol Level</IonCardTitle>
+                  </IonCardHeader>
+                  <IonCardContent>
+                    <div style={{ width: '100%', height: '300px' }}>
+                      <Line data={currentDayChartData} options={chartOptions} />
+                    </div>
+                  </IonCardContent>
+                </IonCard>
+              )}
+
+              {dailyAveragesChartData && (
+                <IonCard>
+                  <IonCardHeader>
+                    <IonCardTitle>Daily Average Alcohol Levels</IonCardTitle>
+                  </IonCardHeader>
+                  <IonCardContent>
+                    <div style={{ width: '100%', height: '300px' }}>
+                      <Bar
+                        data={dailyAveragesChartData}
+                        options={chartOptions}
+                      />
                     </div>
                   </IonCardContent>
                 </IonCard>
