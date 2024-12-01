@@ -31,7 +31,7 @@ const Tab3: React.FC = () => {
       fetch(url, {
         headers: {
           Accept: 'application/vnd.github.v3.raw',
-          Authorization: `token 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`,
+          Authorization: `token ACCESSTOKENHERE`, // REPLACEWITHACCESSTOKEN
         },
       })
         .then((response) => {
