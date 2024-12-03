@@ -14,11 +14,12 @@ if __name__ == '__main__':
             data = json.load(f)
         if arduino.in_waiting > 0:
             lines = arduino.readlines()
-            data['readings'].append({"time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "level": str(int(lines[-1].decode('utf-8').strip()) / 10000)})
+            data['readings'].append({"time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "level": float(lines[-1].decode('utf-8').strip()) / 10000)})
 
         with open('data.json', 'w') as f:
             json.dump(data, f)
         subprocess.call(['git', 'add', 'data.json'])
         subprocess.call(['git', 'commit', '-m', 'Periodic Update'])
+        subprocess.call(['git', 'push'])
         time.sleep(20.0)
     
