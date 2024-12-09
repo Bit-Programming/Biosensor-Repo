@@ -24,7 +24,7 @@ const Tab3: React.FC = () => {
 
   useEffect(() => {
     const url =
-      'https://api.github.com/repos/Bit-Programming/Biosensor-Repo/contents/data.json';
+      'https://cdn.jsdelivr.net/gh/Bit-Programming/Biosensor-Repo@main/data.json';
 
     const fetchData = () => {
       console.log('Fetching data via GitHub API...');
